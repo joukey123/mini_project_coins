@@ -1,19 +1,25 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "react-query";
 import { Link } from "react-router-dom";
-import styled from "styled-components";
+import {styled, keyframes } from "styled-components";
+import { fetchCoins } from "../Api";
+import { useRecoilValue, useSetRecoilState } from "recoil";
+import { isDarkAtom } from "../atoms";
+import { Helmet } from "react-helmet";
 
 
 const Container = styled.div`
-  max-width: 500px;
+  max-width: 400px;
   margin: 0 auto;
 `
 const Header = styled.header`
     height: 10vh;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
 `
 const Title = styled.h1`
+    display: block;
+    width: 33%;
     font-size: 30px;
     text-align: center;
 ` 
@@ -22,7 +28,7 @@ const CoinList = styled.ul`
 
 const Coin = styled.li`
     background-color: white;
-    color : ${props => props.theme.bgColor};
+    color : #1e272e;
     margin-bottom: 10px;
     border-radius: 10px;
     a{
@@ -40,6 +46,28 @@ const Img = styled.img`
     margin-right: 10px;
 
 `
+const Blank = styled.div`
+    width: 20%;
+`
+const DarkMode = styled.div`
+    position: relative;
+    width: 15%;
+    height: 30px;
+    border-radius: 15px;
+    background-color: ${props=>props.theme.bgDarkBtn};
+    cursor: pointer;
+`
+const Btn = styled.div<{isDark:boolean}>`
+    position: absolute;
+    top:0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: ${props=>props.theme.darkBtn};
+    transition: left .2s ease-in-out;
+    left: ${(props)=>props.isDark ? "30px" : "0px"};
+`
+
 interface ICoin {
     id: string,
     name: string,
@@ -53,26 +81,26 @@ interface ICoin {
 
 function Coins() { 
 
-    const [coins, setCoins] = useState<ICoin[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(()=>{
-        (async () => {
-            const response = await fetch("https://api.coinpaprika.com/v1/coins");
-            const json = await response.json();
-            setCoins(json.slice(0,100));
-            setIsLoading(current => !current);
-        })();
-    },[]);
+    const {isLoading, data} = useQuery<ICoin[]>("allCoins",fetchCoins);
+    const isDark = useRecoilValue(isDarkAtom);
+    const setDarkAtom = useSetRecoilState(isDarkAtom);
+    const toggleDarkAtom = () => setDarkAtom((prev) => !prev);
 
     return (
         <Container>
+            <Helmet>
+                <title>코인</title>
+            </Helmet>
             <Header>
+                <Blank></Blank>
                 <Title>코인</Title>
+                <DarkMode onClick={toggleDarkAtom}>
+                    <Btn isDark={isDark}></Btn>
+                </DarkMode>
             </Header>
             {isLoading ? "Loading..." : 
                 <CoinList>
-                    {coins.map((coin)=><Coin key={coin.id}>
+                    {data?.slice(0,100).map((coin)=><Coin key={coin.id}>
                         <Link to={
                             {
                                 pathname:`/${coin.id}`,

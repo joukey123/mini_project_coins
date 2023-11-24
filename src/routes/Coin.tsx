@@ -1,19 +1,30 @@
-import { useEffect, useState } from "react";
-import { Link, Route, Switch, useLocation, useParams } from "react-router-dom";
+import { Link, Route, Switch, useLocation, useParams, useRouteMatch } from "react-router-dom";
 import styled from "styled-components";
 import Chart from "./Chart";
 import Price from "./Price";
+import { fetchCoinInfo, fetchCoinTickers } from "../Api";
+import { useQuery } from "react-query";
+import Helmet from "react-helmet";
 
 
 const Container = styled.div`
-  max-width: 500px;
+  max-width: 400px;
   margin: 0 auto;
 `
 const Header = styled.header`
     height: 10vh;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+`
+
+const BackBtn = styled.div`
+    a {
+        font-size: 20px;
+        &:hover {
+        color:  ${props=>props.theme.accentColor};
+    }
+}
 `
 const Title = styled.h1`
     font-size: 30px;
@@ -24,7 +35,7 @@ const Overview = styled.div`
     display : flex;
     align-items: center;
     justify-content: space-between;
-    background-color: rgba(0,0,0,0.4);
+    background-color: ${props=>props.theme.overViewColor};
     padding: 30px 20px;
     border-radius: 15px;
 `
@@ -46,20 +57,24 @@ const Description = styled.p`
     padding: 0 10px;
 ` 
 
-const Taps = styled.div`
+const Tabs = styled.div`
     display: grid;
     grid-template-columns: repeat(2,auto);
     column-gap: 20px;
 `
-const Tap = styled.div`
-    background-color: rgba(0,0,0,0.4);
+const Tab = styled.div<{isActive:boolean}>`
+    background-color: ${props=>props.theme.overViewColor};
     a{
         display: flex;
         justify-content: center;
         padding: 15px 20px;
+        &:hover {
+            color:${props=>props.theme.accentColor}
+        }
     }
     border-radius: 15px;
     margin: 25px 0;
+    color: ${ props => props.isActive ? props.theme.accentColor : props.theme.textColor};
 `
 
 interface IParams{
@@ -126,70 +141,73 @@ interface ITickers {
 }
 
 function Coin() {
-    const {coinId} = useParams<IParams>();
-    const [info, setInfo] = useState<Iinfo>();
-    const [priceInfo, setPriceInfo] = useState<ITickers>();
-
-    const [isLoading, setIsLoading] = useState(true);
+    const { coinId } = useParams<IParams>();
     const { state } = useLocation<ILocation>();
+    const matchPrice = useRouteMatch("/:coinId/price");
+    const matchChart = useRouteMatch("/:coinId/chart");
 
 
-    useEffect(()=>{
-        (async ()=>{
-            const infoResponse = await fetch(`https://api.coinpaprika.com/v1/coins/${coinId}`);
-            const infoJson = await infoResponse.json();
-            const priceresponse = await fetch(`https://api.coinpaprika.com/v1/tickers/${coinId}`);
-            const priceJson = await priceresponse.json();
-            setInfo(infoJson)
-            setPriceInfo(priceJson) 
-            setIsLoading(false);   
-            })();
+    const {isLoading:infoLoading, data:infoData} = useQuery<Iinfo>(["info",coinId],()=>fetchCoinInfo(coinId));
+    const {isLoading:tickersLoading, data:tickersData} = 
+    useQuery<ITickers>(["tickers",coinId],()=>fetchCoinTickers(coinId));
 
-    },[])
+    const isLoading = infoLoading || tickersLoading;
+
     return (
          <Container>
+            <Helmet>
+                <title>{state?.name ? state.name : isLoading ? "Loading..." : infoData?.name}  </title>
+            </Helmet>
             <Header>
-                <Title>{state?.name ? state.name : isLoading ? "Loading..." : info?.name  }</Title>
+                <BackBtn> 
+                    <Link to={"/"}> &larr; </Link> 
+                </BackBtn>
+                <Title>{state?.name ? state.name : isLoading ? "Loading..." : infoData?.name  }</Title>
+                <div></div>
             </Header>
             {isLoading ? "Loading..." : 
                 <>
                 <Overview>
                     <OvierviewItem>
                         <span>Rank:</span>
-                        <span>{info?.rank}</span>
+                        <span>{infoData?.rank}</span>
                     </OvierviewItem>
                     <OvierviewItem>
                         <span>Symbol:</span>
-                        <span>$ {info?.symbol}</span>
+                        <span>$ {infoData?.symbol}</span>
                     </OvierviewItem>
                     <OvierviewItem>
                         <span>Price:</span>
-                        <span>$ {priceInfo?.quotes.USD.price.toFixed(3)}</span>
+                        <span>$ {tickersData?.quotes.USD.price.toFixed(3)}</span>
                     </OvierviewItem>
                 </Overview>
                 <Description>
-                    {info?.description}
+                    {infoData?.description}
                 </Description>
                 <Overview>
                     <OvierviewItem>
                         <span>Total Supply:</span>
-                        <span>{priceInfo?.total_supply}</span>
+                        <span>{tickersData?.total_supply}</span>
                     </OvierviewItem>
                     <OvierviewItem>
                         <span>Max Supply:</span>
-                        <span>{priceInfo?.max_supply}</span>
+                        <span>{tickersData?.max_supply}</span>
                     </OvierviewItem>
                 </Overview>
-                <Taps>
-                    <Tap><Link to={`/${coinId}/chart`}> Chart</Link></Tap>
-                    <Tap><Link to={`/${coinId}/price`}> Price</Link></Tap>
-                </Taps>
+                <Tabs>
+                    <Tab isActive={matchChart !== null}>
+                        <Link to={`/${coinId}/chart`}> Chart</Link>
+                    </Tab>
+                    <Tab isActive={matchPrice !== null}>
+                        <Link to={`/${coinId}/price`}> Price</Link>
+                    </Tab>
+                </Tabs>
                 <Switch>
                     <Route path={`/${coinId}/chart`}>
-                        <Chart />
+                        <Chart coinId={coinId}/>
                     </Route>
                     <Route path={`/${coinId}/price`}>
-                        <Price />
+                        <Price coinId={coinId}/>
                     </Route>
                 </Switch>
                 </>

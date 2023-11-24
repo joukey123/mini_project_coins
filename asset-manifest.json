@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/mini_project_coins/static/js/main.6caae098.js",
+    "main.js": "/mini_project_coins/static/js/main.b57b69ba.js",
     "index.html": "/mini_project_coins/index.html",
-    "main.6caae098.js.map": "/mini_project_coins/static/js/main.6caae098.js.map"
+    "main.b57b69ba.js.map": "/mini_project_coins/static/js/main.b57b69ba.js.map"
   },
   "entrypoints": [
-    "static/js/main.6caae098.js"
+    "static/js/main.b57b69ba.js"
   ]
 }
